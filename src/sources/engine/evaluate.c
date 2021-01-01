@@ -47,34 +47,37 @@ enum
     MidgamePhase = 24,
 };
 
-const scorepair_t   MobilityN[9] = {
-    SPAIR( -83, -76), SPAIR( -40, -74), SPAIR( -24, -15), SPAIR( -16,  26),
-    SPAIR(  -4,  32), SPAIR(  -3,  49), SPAIR(   4,  53), SPAIR(  13,  48),
-    SPAIR(  26,  31)
+const scorepair_t   Weight[6] = {
+    0, 0, KnightWeight, BishopWeight, RookWeight, QueenWeight
 };
 
-const scorepair_t   MobilityB[14] = {
-    SPAIR( -96, -80), SPAIR( -51,-100), SPAIR( -16, -66), SPAIR( -15, -24),
-    SPAIR(  -5,  -1), SPAIR(   1,  16), SPAIR(   4,  33), SPAIR(   4,  41),
-    SPAIR(   4,  49), SPAIR(   5,  54), SPAIR(   8,  52), SPAIR(  19,  44),
-    SPAIR(  44,  43), SPAIR(  46,  26)
-};
-
-const scorepair_t   MobilityR[15] = {
-    SPAIR( -43, -11), SPAIR( -56, -14), SPAIR( -37,  -6), SPAIR( -35,  22),
-    SPAIR( -34,  59), SPAIR( -33,  69), SPAIR( -31,  84), SPAIR( -28,  91),
-    SPAIR( -24,  94), SPAIR( -19,  98), SPAIR( -15, 104), SPAIR( -13, 105),
-    SPAIR(  -8, 105), SPAIR(   7,  95), SPAIR(  54,  64)
-};
-
-const scorepair_t   MobilityQ[28] = {
-    SPAIR(  -8,-144), SPAIR(  -6,-117), SPAIR(  -5, -90), SPAIR(  -7, -63),
-    SPAIR( -13, -38), SPAIR(  -6, -11), SPAIR(   5,  26), SPAIR(   7,  74),
-    SPAIR(  12, 101), SPAIR(  15, 125), SPAIR(  19, 137), SPAIR(  21, 159),
-    SPAIR(  25, 170), SPAIR(  30, 173), SPAIR(  30, 183), SPAIR(  30, 189),
-    SPAIR(  29, 191), SPAIR(  25, 197), SPAIR(  24, 198), SPAIR(  21, 196),
-    SPAIR(  33, 186), SPAIR(  33, 183), SPAIR(  31, 171), SPAIR(  31, 167),
-    SPAIR(  21, 156), SPAIR(  15, 151), SPAIR(  15, 145), SPAIR(  17, 146)
+const scorepair_t   Mobility[4][28] = {
+    {
+        SPAIR( -83, -76), SPAIR( -40, -74), SPAIR( -24, -15), SPAIR( -16,  26),
+        SPAIR(  -4,  32), SPAIR(  -3,  49), SPAIR(   4,  53), SPAIR(  13,  48),
+        SPAIR(  26,  31)
+    },
+    {
+        SPAIR( -96, -80), SPAIR( -51,-100), SPAIR( -16, -66), SPAIR( -15, -24),
+        SPAIR(  -5,  -1), SPAIR(   1,  16), SPAIR(   4,  33), SPAIR(   4,  41),
+        SPAIR(   4,  49), SPAIR(   5,  54), SPAIR(   8,  52), SPAIR(  19,  44),
+        SPAIR(  44,  43), SPAIR(  46,  26)
+    },
+    {
+        SPAIR( -43, -11), SPAIR( -56, -14), SPAIR( -37,  -6), SPAIR( -35,  22),
+        SPAIR( -34,  59), SPAIR( -33,  69), SPAIR( -31,  84), SPAIR( -28,  91),
+        SPAIR( -24,  94), SPAIR( -19,  98), SPAIR( -15, 104), SPAIR( -13, 105),
+        SPAIR(  -8, 105), SPAIR(   7,  95), SPAIR(  54,  64)
+    },
+    {
+        SPAIR(  -8,-144), SPAIR(  -6,-117), SPAIR(  -5, -90), SPAIR(  -7, -63),
+        SPAIR( -13, -38), SPAIR(  -6, -11), SPAIR(   5,  26), SPAIR(   7,  74),
+        SPAIR(  12, 101), SPAIR(  15, 125), SPAIR(  19, 137), SPAIR(  21, 159),
+        SPAIR(  25, 170), SPAIR(  30, 173), SPAIR(  30, 183), SPAIR(  30, 189),
+        SPAIR(  29, 191), SPAIR(  25, 197), SPAIR(  24, 198), SPAIR(  21, 196),
+        SPAIR(  33, 186), SPAIR(  33, 183), SPAIR(  31, 171), SPAIR(  31, 167),
+        SPAIR(  21, 156), SPAIR(  15, 151), SPAIR(  15, 145), SPAIR(  17, 146)
+    }
 };
 
 const int   AttackRescale[8] = {
@@ -133,151 +136,65 @@ void        eval_init(const board_t *board, evaluation_t *eval)
         eval->tempos[board->side_to_move] += 1;
 }
 
-scorepair_t evaluate_knights(const board_t *board, evaluation_t *eval, color_t c)
+scorepair_t evaluate_pieces(const board_t *board, evaluation_t *eval, color_t c, piecetype_t pt)
 {
-    scorepair_t ret = 0;
-    bitboard_t  bb = piece_bb(board, c, KNIGHT);
-    bitboard_t  targets = pieces_bb(board, not_color(c), ROOK, QUEEN);
+    scorepair_t      ret = 0;
+    const bitboard_t occupancy = board->piecetype_bits[ALL_PIECES];
+    const bitboard_t targets = pt == QUEEN ? 0
+                             : pt == ROOK  ? piece_bb(board, not_color(c), QUEEN)
+                                           : pieces_bb(board, not_color(c), ROOK, QUEEN);
+    bitboard_t       bb = piece_bb(board, c, pt);
 
-    // Penalty for having the Knight pair
+    // Bonus/Penalty for the piece pairs
 
-    if (more_than_one(bb))
+    if (pt == KNIGHT && more_than_one(bb))
         ret += KnightPairPenalty;
 
-    while (bb)
-    {
-        square_t    sq = pop_first_square(&bb);
-        bitboard_t  b = knight_moves(sq);
-
-        // Bonus for Knight mobility
-
-        ret += MobilityN[popcount(b & eval->mobility_zone[c])];
-
-        // Bonus for a Knight on King Attack zone
-
-        if (b & eval->king_zone[c])
-        {
-            eval->attackers[c] += 1;
-            eval->weights[c] += popcount(b & eval->king_zone[c]) * KnightWeight;
-        }
-
-        // Tempo bonus for a Knight attacking the opponent's major pieces
-
-        if (b & targets)
-            eval->tempos[c] += popcount(b & targets);
-    }
-    return (ret);
-}
-
-scorepair_t evaluate_bishops(const board_t *board, evaluation_t *eval, color_t c)
-{
-    scorepair_t         ret = 0;
-    const bitboard_t    occupancy = board->piecetype_bits[ALL_PIECES];
-    bitboard_t          bb = piece_bb(board, c, BISHOP);
-    bitboard_t          targets = pieces_bb(board, not_color(c), ROOK, QUEEN);
-
-    // Bonus for the Bishop pair
-
-    if (more_than_one(bb))
+    if (pt == BISHOP && more_than_one(bb))
         ret += BishopPairBonus;
 
-    while (bb)
-    {
-        square_t    sq = pop_first_square(&bb);
-        bitboard_t  b = bishop_move_bits(sq, occupancy);
-
-        // Bonus for Bishop mobility
-
-        ret += MobilityB[popcount(b & eval->mobility_zone[c])];
-
-        // Bonus for a Bishop on King Attack zone
-
-        if (b & eval->king_zone[c])
-        {
-            eval->attackers[c] += 1;
-            eval->weights[c] += popcount(b & eval->king_zone[c]) * BishopWeight;
-        }
-
-        // Tempo bonus for a Bishop attacking the opponent's major pieces
-
-        if (b & targets)
-            eval->tempos[c] += popcount(b & targets);
-    }
-    return (ret);
-}
-
-scorepair_t evaluate_rooks(const board_t *board, evaluation_t *eval, color_t c)
-{
-    scorepair_t         ret = 0;
-    const bitboard_t    occupancy = board->piecetype_bits[ALL_PIECES];
-    const bitboard_t    my_pawns = piece_bb(board, c, PAWN);
-    const bitboard_t    their_pawns = piecetype_bb(board, PAWN) & ~my_pawns;
-    const bitboard_t    their_queens = piece_bb(board, not_color(c), QUEEN);
-    bitboard_t          bb = piece_bb(board, c, ROOK);
-
-    // Penalty for the Rook pair
-
-    if (more_than_one(bb))
+    if (pt == ROOK && more_than_one(bb))
         ret += RookPairPenalty;
 
     while (bb)
     {
         square_t    sq = pop_first_square(&bb);
-        bitboard_t  rook_file = file_square_bits(sq);
-        bitboard_t  b = rook_move_bits(sq, occupancy);
+        bitboard_t  b = pt_moves(pt, sq, occupancy);
 
-        // Bonus for a Rook on an open (or semi-open) file
+        // Bonus for mobility
 
-        if (!(rook_file & my_pawns))
-            ret += (rook_file & their_pawns) ? RookOnSemiOpenFile : RookOnOpenFile;
+        ret += Mobility[pt-2][popcount(b & eval->mobility_zone[c])];
 
-        // Bonus for a Rook on the same file as the opponent's Queen(s)
-
-        if (rook_file & their_queens)
-            ret += RookXrayQueen;
-
-        // Bonus for Rook mobility
-
-        ret += MobilityR[popcount(b & eval->mobility_zone[c])];
-
-        // Bonus for a Rook on King Attack zone
+        // Bonus for attacks on King Attack zone
 
         if (b & eval->king_zone[c])
         {
             eval->attackers[c] += 1;
-            eval->weights[c] += popcount(b & eval->king_zone[c]) * RookWeight;
+            eval->weights[c] += popcount(b & eval->king_zone[c]) * Weight[pt];
         }
 
-        // Tempo bonus for a Rook attacking the opponent's Queen(s)
+        // Tempo bonus for attacking the opponent's major pieces
 
-        if (b & their_queens)
-            eval->tempos[c] += popcount(b & their_queens);
-    }
-    return (ret);
-}
+        if (b & targets)
+            eval->tempos[c] += popcount(b & targets);
 
-scorepair_t evaluate_queens(const board_t *board, evaluation_t *eval, color_t c)
-{
-    scorepair_t         ret = 0;
-    const bitboard_t    occupancy = board->piecetype_bits[ALL_PIECES];
-    bitboard_t          bb = piece_bb(board, c, QUEEN);
+        // Rook-specific bonuses
 
-    while (bb)
-    {
-        square_t    sq = pop_first_square(&bb);
-        bitboard_t  b = bishop_move_bits(sq, occupancy)
-            | rook_move_bits(sq, occupancy);
-
-        // Bonus for Queen mobility
-
-        ret += MobilityQ[popcount(b & eval->mobility_zone[c])];
-
-        // Bonus for a Queen on King Attack zone
-
-        if (b & eval->king_zone[c])
+        if (pt == ROOK)
         {
-            eval->attackers[c] += 1;
-            eval->weights[c] += popcount(b & eval->king_zone[c]) * QueenWeight;
+            const bitboard_t rook_file = file_square_bits(sq);
+            const bitboard_t my_pawns = piece_bb(board, c, PAWN);
+            const bitboard_t their_pawns = piecetype_bb(board, PAWN) & ~my_pawns;
+
+            // Bonus for a Rook on an open (or semi-open) file
+
+            if (!(rook_file & my_pawns))
+                ret += (rook_file & their_pawns) ? RookOnSemiOpenFile : RookOnOpenFile;
+
+            // Bonus for a Rook on the same file as the opponent's Queen(s)
+
+            if (rook_file & targets)
+                ret += RookXrayQueen;
         }
     }
     return (ret);
@@ -317,14 +234,14 @@ score_t evaluate(const board_t *board)
 
     // Add the pieces' evaluation
 
-    tapered += evaluate_knights(board, &eval, WHITE);
-    tapered -= evaluate_knights(board, &eval, BLACK);
-    tapered += evaluate_bishops(board, &eval, WHITE);
-    tapered -= evaluate_bishops(board, &eval, BLACK);
-    tapered += evaluate_rooks(board, &eval, WHITE);
-    tapered -= evaluate_rooks(board, &eval, BLACK);
-    tapered += evaluate_queens(board, &eval, WHITE);
-    tapered -= evaluate_queens(board, &eval, BLACK);
+    tapered += evaluate_pieces(board, &eval, WHITE, KNIGHT);
+    tapered -= evaluate_pieces(board, &eval, BLACK, KNIGHT);
+    tapered += evaluate_pieces(board, &eval, WHITE, BISHOP);
+    tapered -= evaluate_pieces(board, &eval, BLACK, BISHOP);
+    tapered += evaluate_pieces(board, &eval, WHITE, ROOK);
+    tapered -= evaluate_pieces(board, &eval, BLACK, ROOK);
+    tapered += evaluate_pieces(board, &eval, WHITE, QUEEN);
+    tapered -= evaluate_pieces(board, &eval, BLACK, QUEEN);
 
     // Add the King Safety evaluation
 
