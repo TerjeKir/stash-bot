@@ -158,7 +158,7 @@ scorepair_t evaluate_pieces(const board_t *board, evaluation_t *eval, color_t c,
     while (bb)
     {
         square_t    sq = pop_first_square(&bb);
-        bitboard_t  b = pt_moves(pt, sq, occupancy);
+        bitboard_t  b = piece_moves(pt, sq, occupancy);
 
         // Bonus for mobility
 
