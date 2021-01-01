@@ -136,7 +136,7 @@ void        eval_init(const board_t *board, evaluation_t *eval)
         eval->tempos[board->side_to_move] += 1;
 }
 
-scorepair_t evaluate_pieces(const board_t *board, evaluation_t *eval, color_t c, piecetype_t pt)
+INLINED scorepair_t evaluate_pieces(const board_t *board, evaluation_t *eval, color_t c, piecetype_t pt)
 {
     scorepair_t      ret = 0;
     const bitboard_t occupancy = board->piecetype_bits[ALL_PIECES];
