@@ -140,8 +140,8 @@ scorepair_t evaluate_pieces(const board_t *board, evaluation_t *eval, color_t c,
 {
     scorepair_t      ret = 0;
     const bitboard_t occupancy = board->piecetype_bits[ALL_PIECES];
-    const bitboard_t targets = pt == ROOK  ? piece_bb(board, not_color(c), QUEEN)
-                                           : pieces_bb(board, not_color(c), ROOK, QUEEN);
+    const bitboard_t targets = pt == ROOK ? piece_bb(board, not_color(c), QUEEN)
+                                          : pieces_bb(board, not_color(c), ROOK, QUEEN);
     bitboard_t       bb = piece_bb(board, c, pt);
 
     // Bonus/Penalty for the piece pairs
