@@ -179,6 +179,17 @@ INLINED bitboard_t  queen_moves(const board_t *board, square_t square)
         | rook_move_bits(square, board->piecetype_bits[ALL_PIECES]));
 }
 
+INLINED bitboard_t  pt_moves(piecetype_t pt, square_t square, bitboard_t occ)
+{
+    switch (pt) {
+        case KING:   return king_moves(square);
+        case KNIGHT: return knight_moves(square);
+        case BISHOP: return bishop_move_bits(square, occ);
+        case ROOK:   return rook_move_bits(square, occ);
+        default:     return bishop_move_bits(square, occ) | rook_move_bits(square, occ);
+    }
+}
+
 INLINED bitboard_t  piece_moves(piecetype_t piecetype, square_t square,
                     bitboard_t occupied)
 {
