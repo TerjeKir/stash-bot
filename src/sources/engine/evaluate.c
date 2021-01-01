@@ -47,8 +47,8 @@ enum
     MidgamePhase = 24,
 };
 
-const scorepair_t   Weight[6] = {
-    0, 0, KnightWeight, BishopWeight, RookWeight, QueenWeight
+const scorepair_t   Weight[4] = {
+    KnightWeight, BishopWeight, RookWeight, QueenWeight
 };
 
 const scorepair_t   Mobility[4][28] = {
@@ -169,7 +169,7 @@ scorepair_t evaluate_pieces(const board_t *board, evaluation_t *eval, color_t c,
         if (b & eval->king_zone[c])
         {
             eval->attackers[c] += 1;
-            eval->weights[c] += popcount(b & eval->king_zone[c]) * Weight[pt];
+            eval->weights[c] += popcount(b & eval->king_zone[c]) * Weight[pt-2];
         }
 
         // Tempo bonus for attacking the opponent's major pieces
