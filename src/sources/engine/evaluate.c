@@ -183,12 +183,12 @@ INLINED scorepair_t evaluate_pieces(const board_t *board, evaluation_t *eval, co
         {
             const bitboard_t rook_file = file_square_bits(sq);
             const bitboard_t my_pawns = piece_bb(board, c, PAWN);
-            const bitboard_t their_pawns = piecetype_bb(board, PAWN) & ~my_pawns;
+            const bitboard_t pawns = piecetype_bb(board, PAWN);
 
             // Bonus for a Rook on an open (or semi-open) file
 
             if (!(rook_file & my_pawns))
-                ret += (rook_file & their_pawns) ? RookOnSemiOpenFile : RookOnOpenFile;
+                ret += (rook_file & pawns) ? RookOnSemiOpenFile : RookOnOpenFile;
 
             // Bonus for a Rook on the same file as the opponent's Queen(s)
 
